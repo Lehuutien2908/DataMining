@@ -1,0 +1,10 @@
+numpy
+pandas
+scikit-learn
+xgboost
+tensorflow-cpu
+fastapi
+uvicorn
+joblib
+pydantic
+mlxtend
