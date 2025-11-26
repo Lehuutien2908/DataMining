@@ -1,0 +1,40 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environment
+venv/
+env/
+
+# Jupyter notebooks (research should not be in backend)
+*.ipynb
+
+# Data files (should not go into backend image)
+*.csv
+*.xlsx
+data/
+datasets/
+
+# Large files
+*.h5
+*.json
+*.pkl
+!app/models/*.h5
+!app/models/*.json
+!app/models/*.pkl
+
+# Logs
+*.log
+logs/
+
+# Git files
+.git/
+.gitignore
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Model exports in research
+../research/
