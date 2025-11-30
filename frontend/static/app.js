@@ -50,7 +50,7 @@ async function predict() {
 
     if (json.label === 1) {
       result.innerHTML = `
-        <div style="font-size:52px; color:#c62828;">CẢNH BÁO NGUY CƠ CAO!</div>
+        <div style="font-size:52px; color:#c62828;">CẢNH BÁO NGUY CƠ MẮC BỆNH CAO!</div>
         <div style="font-size:72px; font-weight:bold; color:#e74c3c; margin:25px 0;">
           ${prob}%
         </div>
