@@ -1,21 +1,26 @@
 import numpy as np
 import joblib
 import xgboost as xgb
+import os
 
 from sklearn.svm import SVC
 from tensorflow import keras
-from .preprocess import preprocess_input
+from preprocess import preprocess_input
+
+# Get the directory where this file is located
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODELS_DIR = os.path.join(BASE_DIR, "models")
 
 # ---- Load models ----
 # XGBoost
 xgb_model = xgb.XGBClassifier()
-xgb_model.load_model("app/models/xgb_model.json")
+xgb_model.load_model(os.path.join(MODELS_DIR, "xgb_model.json"))
 
 # MLP
-mlp_model = keras.models.load_model("app/models/mlp_model.h5")
+mlp_model = keras.models.load_model(os.path.join(MODELS_DIR, "mlp_model.h5"))
 
 #svm
-svm_model = joblib.load("app/models/svm_model.pkl")
+svm_model = joblib.load(os.path.join(MODELS_DIR, "svm_model.pkl"))
 
 def predict_xgb(data: dict):
     x = preprocess_input(data)
