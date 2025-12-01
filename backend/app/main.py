@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-from .predict import predict_xgb, predict_mlp, predict_svm
+from predict import predict_xgb, predict_mlp, predict_svm
 
 app = FastAPI(title="Heart Disease Prediction API")
 
@@ -37,3 +37,7 @@ def predict_mlp_api(data: PatientData):
 def predict_svm_api(data: PatientData):
     prob = predict_svm(data.dict())
     return {"probability": prob, "label": int(prob >= 0.5)}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
