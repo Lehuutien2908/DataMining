@@ -22,6 +22,8 @@ mlp_model = keras.models.load_model(os.path.join(MODELS_DIR, "mlp_model.h5"))
 #svm
 svm_model = joblib.load(os.path.join(MODELS_DIR, "svm_model.pkl"))
 
+rf_model = joblib.load(os.path.join(MODELS_DIR, "rf_model.pkl"))
+
 def predict_xgb(data: dict):
     x = preprocess_input(data)
     prob = xgb_model.predict_proba(x)[0][1]
@@ -36,4 +38,8 @@ def predict_mlp(data: dict):
 def predict_svm(data: dict) -> float:
     x = preprocess_input(data)
     prob = svm_model.predict_proba(x)[0][1]
+    return float(prob)
+def predict_rf(data: dict) -> float:
+    x = preprocess_input(data)
+    prob = rf_model.predict_proba(x)[0][1]
     return float(prob)
