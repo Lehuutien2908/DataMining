@@ -109,6 +109,22 @@ You can simply upload a \verb|.bib| file containing your BibTeX entries, created
 
 If you have an \href{https://www.overleaf.com/user/subscription/plans}{upgraded account}, you can also import your Mendeley or Zotero library directly as a \verb|.bib| file, via the upload menu in the file-tree.
 
+\subsection{SVM Model (Support Vector Machine)}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|}
+\hline
+Tham số       & Giá trị thử                          \\
+\hline
+C             & 0.1, 1, 10, 100                      \\
+gamma         & scale, auto, 0.001, 0.01, 0.1, 1      \\
+class\_weight & balanced                             \\
+\hline
+\end{tabular}
+\caption{Tham số tuning cho SVM bằng GridSearchCV}
+\end{table}
+
 \subsection{Good luck!}
 
 We hope you find Overleaf useful, and do take a look at our \href{https://www.overleaf.com/learn}{help library} for more tutorials and user guides! Please also let us know if you have any feedback using the \textbf{Contact us} link at the bottom of the Overleaf menu --- or use the contact form at \url{https://www.overleaf.com/contact}.
