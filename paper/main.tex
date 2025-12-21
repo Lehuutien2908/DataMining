@@ -12,6 +12,8 @@
 \usepackage{amsmath}
 \usepackage{graphicx}
 \usepackage[colorlinks=true, allcolors=blue]{hyperref}
+\usepackage{booktabs}
+\usepackage{float}
 
 \title{Your Paper}
 \author{You}
@@ -109,21 +111,36 @@ You can simply upload a \verb|.bib| file containing your BibTeX entries, created
 
 If you have an \href{https://www.overleaf.com/user/subscription/plans}{upgraded account}, you can also import your Mendeley or Zotero library directly as a \verb|.bib| file, via the upload menu in the file-tree.
 
-\subsection{SVM Model (Support Vector Machine)}
+\subsection{SVM Model }
+
+The SVM model was implemented with an RBF kernel and optimized using GridSearchCV. The parameters tuned include C and gamma, along with class-weight='balanced' to handle data imbalance and probability=True to obtain prediction probabilities.
+
+Parameters tested:
+- C = 0.1, 1, 10, 100
+- gamma = scale, auto, 0.001, 0.01, 0.1, 1
+- class-weight = balanced
+
+Best parameters found: C = 10, gamma = 'scale'
+
+Results achieved:
+- AUC $\approx$ 0.99
+- Recall $\approx$ 0.98 (almost no false negatives – very important in medical applications)
 
 \begin{table}[h]
 \centering
 \begin{tabular}{|l|l|}
 \hline
-Tham số       & Giá trị thử                          \\
+Parameter & Values tested \\
 \hline
-C             & 0.1, 1, 10, 100                      \\
-gamma         & scale, auto, 0.001, 0.01, 0.1, 1      \\
-class\_weight & balanced                             \\
+C & 0.1, 1, 10, 100 \\
+gamma & scale, auto, 0.001, 0.01, 0.1, 1 \\
+class\_weight & balanced \\
 \hline
 \end{tabular}
-\caption{Tham số tuning cho SVM bằng GridSearchCV}
+\caption{Parameter tuning for SVM using GridSearchCV}
 \end{table}
+
+SVM is the most suitable model for clinical applications due to its extremely high recall – prioritizing the avoidance of missing patients at risk.{table}
 
 \subsection{Good luck!}
 
