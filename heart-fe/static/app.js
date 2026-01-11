@@ -1,5 +1,5 @@
-//const API_URL = "http://127.0.0.1:8000";
-const API_URL = "https://heart-api-thaibinh.onrender.com";
+// Gọi trực tiếp backend (CORS đã được cấu hình trong backend)
+const API_URL = "http://localhost:8000";
 
 const MODEL_ENDPOINTS = {
   xgb: "/predict/xgb",

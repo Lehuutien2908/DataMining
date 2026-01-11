@@ -94,4 +94,4 @@ Thumbs.db
 *.zip
 *.tar.gz
 *.rar
-
+.docker-compose.yml

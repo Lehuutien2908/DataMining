@@ -1,7 +1,18 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from predict import predict_xgb, predict_mlp, predict_svm, predict_rf
+from .predict import predict_xgb, predict_mlp, predict_svm, predict_rf, predict_dnn
+
 app = FastAPI(title="Heart Disease Prediction API")
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, specify exact origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class PatientData(BaseModel):
     age: float
@@ -36,10 +47,21 @@ def predict_mlp_api(data: PatientData):
 def predict_svm_api(data: PatientData):
     prob = predict_svm(data.dict())
     return {"probability": prob, "label": int(prob >= 0.5)}
+
 @app.post("/predict/rf")
 def predict_rf_api(data: PatientData):
     prob = predict_rf(data.dict())
     return {"probability": prob, "label": int(prob >= 0.5)}
+
+@app.post("/predict/dnn")
+def predict_dnn_api(data: PatientData):
+    prob = predict_dnn(data.dict())
+    return {
+        "probability": prob,
+        "label": int(prob >= 0.5)
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -1,0 +1,33 @@
+version: "3.9"
+
+services:
+  backend:
+    build: ./backend
+    container_name: heart_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app  
+      - ./backend/app/models:/app/app/models  
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    restart: always
+    networks:
+      - heart_network
+
+  frontend:
+    build: ./heart-fe
+    container_name: heart_frontend
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./heart-fe/index.html:/app/index.html
+      - ./heart-fe/static:/app/static
+    depends_on:
+      - backend
+    restart: always
+    networks:
+      - heart_network
+
+networks:
+  heart_network:
+    driver: bridge
