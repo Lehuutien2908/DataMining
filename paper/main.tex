@@ -7,224 +7,376 @@
 \usepackage{url}
 \usepackage{algorithm}
 \usepackage{algorithmic}
+\usepackage{float}
+\usepackage[utf8]{inputenc}
+\usepackage[T5]{fontenc}
+\usepackage{array}
 
-\title{A Comparative Study of Classical and Deep Learning Models for Heart Disease Prediction with Feature Selection and TabNet Optimization}
+\title{A Comparative Study of Classical and Deep Learning Models for Heart Disease Prediction}
 
 \author{
-Author Name$^{1}$, Author Name$^{2}$ \\
-$^{1}$Affiliation, Country \\
-$^{2}$Affiliation, Country \\
-Email: author@domain.com
+Phạm Trung Trí$^{1}$ and Nguyễn Hoànng Quân$^{2}$\\
+Nông Lâm University, Việt Nam
 }
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-Heart disease remains one of the leading causes of mortality worldwide, motivating the development of accurate and reliable machine learning models for early detection. This paper presents a comprehensive experimental pipeline for binary heart disease classification based on a public Kaggle dataset. The proposed workflow strictly follows a reproducible sequence: data loading, outlier removal using the Interquartile Range (IQR) method, exploratory data analysis, stratified train--test splitting, feature scaling with StandardScaler, and feature selection driven by Random Forest feature importance combined with threshold optimization based on ROC-AUC using XGBoost. Five predictive models are evaluated, including a multilayer perceptron (MLP), support vector machine with RBF kernel (SVM), Random Forest, XGBoost, and TabNet optimized via Optuna with cross-validated AUC as the objective. Model performance is assessed using a comprehensive set of metrics derived from the confusion matrix and probabilistic outputs, including accuracy, precision, recall, F1-score, specificity, sensitivity, negative predictive value, false positive rate, false negative rate, balanced accuracy, and ROC-AUC. Quantitative results are reported as templates due to stochasticity across runs, while detailed instructions are provided to reproduce exact values. The study highlights the strengths of tree-based and deep tabular models, discusses the impact of preprocessing and feature selection, and addresses methodological limitations related to threshold optimization. All trained models and preprocessing artifacts are saved to facilitate deployment and future research.
+Heart disease remains one of the leading causes of mortality worldwide, motivating the development of accurate and reliable machine learning models for early detection. This paper presents an experimental pipeline for binary heart disease classification based on a public Kaggle dataset. Five predictive models are compared, including a support vector machine with RBF kernel, Random Forest, XGBoost, and TabNet.
 \end{abstract}
 
 \begin{IEEEkeywords}
-Heart disease prediction, machine learning, feature selection, TabNet, Optuna, ROC-AUC
+Heart disease prediction, machine learning, feature selection, feature importance, TabNet, Optuna, ROC-AUC
 \end{IEEEkeywords}
 
 \section{Introduction}
-Cardiovascular diseases are a major global health concern, accounting for a substantial proportion of deaths each year. Early detection of heart disease using clinical and demographic attributes can significantly improve patient outcomes. In recent years, machine learning (ML) and deep learning (DL) approaches have demonstrated strong potential in medical decision support systems, particularly for structured tabular data.
+Cardiovascular diseases are major global health concern. Early detection using clinical and demographic attributes can significantly improve patient outcomes. Machine learning (ML) and deep learning (DL) methods have been increasingly adopted for structured clinical datasets.
 
-This paper presents a systematic comparison of classical ML models and modern deep learning architectures for heart disease prediction. Unlike many prior works that focus on a single model or limited preprocessing, this study emphasizes an end-to-end, reproducible pipeline that includes robust outlier handling, principled feature selection, extensive hyperparameter optimization, and comprehensive evaluation metrics. Special attention is given to TabNet, a neural network architecture specifically designed for tabular data, optimized using Optuna.
+This work emphasizes systematic model comparison across classical ML and deep tabular DL, and feature influence re-assessment to better understand which attributes drive predictions and how stable these findings are across methods.
 
 \section{Related Work}
-Random Forests \cite{breiman2001random} and Support Vector Machines \cite{cortes1995support} are widely used in medical classification due to their robustness and strong generalization. Gradient boosting methods, particularly XGBoost \cite{chen2016xgboost}, have achieved state-of-the-art performance on many structured datasets. Deep learning for tabular data has traditionally lagged behind tree-based models; however, TabNet \cite{arik2021tabnet} introduces an attention-based mechanism that enables interpretability and competitive performance.
+Random Forests and SVMs are widely used in medical classification due to robust generalization, while gradient boosting methods such as XGBoost often achieve strong performance on tabular data. For deep tabular modeling, TabNet introduces an attentive mechanism that can offer competitive performance with interpretability. Hyperparameter optimization frameworks such as Optuna facilitate efficient tuning. ROC-AUC is commonly used for binary medical classification due to its threshold-independent property.
 
-Hyperparameter optimization frameworks such as Optuna \cite{akiba2019optuna} have become essential for efficient model tuning. Feature scaling using StandardScaler \cite{sklearn_scaler} is a standard practice for distance-based models like SVMs. Model evaluation commonly relies on ROC-AUC analysis \cite{fawcett2006introduction}, which is threshold-independent and well-suited for binary medical classification.
 
 \section{Dataset and Preprocessing}
-\subsection{Dataset Description}
-The experiments use the Heart Disease Dataset from Kaggle, consisting of clinical and demographic attributes such as \textit{age}, \textit{sex}, \textit{cp}, \textit{trestbps}, \textit{chol}, \textit{thalach}, \textit{oldpeak}, among others. The binary target variable \textit{target} indicates the presence (1) or absence (0) of heart disease.
 
-\begin{table}[h]
+\subsection{Dataset Description}
+We use a public Heart Disease dataset from Kaggle (\texttt{heart.csv}), containing tabular clinical attributes such as \textit{age}, \textit{sex}, \textit{cp}, \textit{trestbps}, \textit{chol}, \textit{thalach}, \textit{oldpeak}, and a binary target column \textit{target} indicating presence (1) or absence (0) of heart disease. The exact feature set corresponds to the columns present in the input file.
+
+\begin{table}[t]
 \centering
-\caption{Dataset Feature Description}
+\caption{Dataset Features (Derived from \texttt{heart.csv}; Template)}
 \label{tab:dataset_features}
-\begin{tabular}{ll}
+\begin{tabular}{p{3.2cm}p{4.8cm}}
 \toprule
-Feature & Description \\
+Feature & Meaning (brief) \\
 \midrule
 age & Age of patient \\
 trestbps & Resting blood pressure \\
 chol & Serum cholesterol \\
 thalach & Maximum heart rate achieved \\
 oldpeak & ST depression induced by exercise \\
-$\vdots$ & $\vdots$ \\
-target & Heart disease indicator \\
+\vdots & Other categorical/clinical attributes present in file \\
+target & Binary label (1: disease, 0: no disease) \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Missing Values Check}
-Missing values are inspected using \texttt{isna().sum()}. According to the code, no missing values are present in the dataset.
 
-\subsection{Outlier Removal with IQR}
-Outliers are removed using the Interquartile Range (IQR) method on continuous variables: \textit{age}, \textit{trestbps}, \textit{chol}, \textit{thalach}, and \textit{oldpeak}. For each feature, values outside $[Q1 - 1.5 \times IQR, Q3 + 1.5 \times IQR]$ are discarded. The number of removed samples depends on the dataset distribution.
+\subsection{Outlier Removal with IQR (Train-Fit Bounds, Apply to Both)}
+Outlier bounds are computed \emph{only on the training set} for continuous features:
+\[
+\{\texttt{age},\texttt{trestbps},\texttt{chol},\texttt{thalach},\texttt{oldpeak}\}.
+\]
+For each feature, the IQR bounds are:
+\[
+\text{lower}=Q1-1.5\cdot IQR,\qquad \text{upper}=Q3+1.5\cdot IQR.
+\]
+Using these bounds (estimated from training), the code then removes rows in both \texttt{train\_df} and \texttt{test\_df} that fall outside the bounds. The numbers of removed rows and the bounds per feature are printed during execution and should be reported from logs.
+
+\subsection{Exploratory Data Analysis (EDA)}
+Exploratory data analysis is conducted on the raw dataset to investigate relationships among numerical features prior to preprocessing. A correlation heatmap (Fig.~\ref{fig:corr}) is used to visualize inter-feature dependencies and to identify potential multicollinearity that may affect subsequent modeling stages.
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\linewidth]{heatmap.png}
+\caption{Correlation heatmap of the raw dataset.}
+\label{fig:corr}
+\end{figure}
+
 
 \section{Methodology}
-\subsection{Train--Test Split}
-The cleaned dataset is split into training and testing sets with a ratio of 70:30 using stratified sampling and a fixed random state of 42.
+
+\subsection{RF Feature Ranking}
+A Random Forest is trained on the cleaned training set to compute Gini (MDI) feature importances. The resulting importance vector is sorted in descending order to form a ranked feature list.
+
+\subsection{Feature Selection}
+Given the ranked feature list, the code evaluates top-$k$ feature subsets for
+$k = 1, \dots, d$, where $d$ denotes the total number of available features.
+For each value of $k$, a Random Forest classifier is trained and evaluated
+using 5-fold stratified cross-validation on the training set, with ROC-AUC
+used as the performance metric.
+
+The resulting sweep produces a table containing the number of selected features
+($k$), the mean ROC-AUC across folds (\texttt{mean\_auc}), the corresponding
+standard deviation (\texttt{std\_auc}), and the average model fit time.
+Let $\mu_{\max}$ denote the maximum mean ROC-AUC observed across all values of $k$,
+and let $\sigma_{\max}$ be the standard deviation associated with that optimum.
+
+To avoid selecting an overly complex feature subset, the final selection follows
+the 1-standard-deviation (1$\sigma$) rule, defined as
+\[
+\text{threshold} = \mu_{\max} - \sigma_{\max}.
+\]
+The selected feature subset corresponds to the \emph{smallest} value of $k$
+whose mean ROC-AUC satisfies $\mu_k \ge \text{threshold}$.
+This criterion favors simpler models with statistically comparable performance,
+thereby improving robustness and reducing the risk of overfitting.
+
+
+\begin{table}[t]
+\centering
+\caption{Top-$k$ Sweep on Training Set (Template; Filled from \texttt{rf\_table})}
+\label{tab:topk_sweep}
+\begin{tabular}{cccc}
+\toprule
+$k$ & mean AUC & std AUC & mean fit time (s) \\
+\midrule
+1 & \{AUC\_K1\} & \{STD\_K1\} & \{T\_K1\} \\
+2 & \{AUC\_K2\} & \{STD\_K2\} & \{T\_K2\} \\
+$\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \subsection{Feature Scaling}
-All features are standardized using \texttt{StandardScaler}, fitted on the training set and applied to the test set.
+After the feature subset is selected,
+feature scaling is applied to ensure comparable feature ranges for
+distance-based and gradient-based models.
+A \texttt{StandardScaler} is fitted to the selected features of the training
+set and subsequently applied to both training and test data.
+\[
+X_{\text{train}}^{(s)} = \text{Scaler}(X_{\text{train}}^{\text{sel}}), \quad
+X_{\text{test}}^{(s)} = \text{Scaler}(X_{\text{test}}^{\text{sel}}),
+\]
+where the scaler parameters are estimated exclusively from the training set
+to prevent information leakage.
 
-\subsection{Feature Selection Strategy}
-A Random Forest with 500 trees is trained to estimate feature importance. Thresholds from 0.01 to 0.10 are scanned. For each threshold, features with importance above the threshold are selected, and an XGBoost model with 120 estimators is trained. The threshold yielding the highest ROC-AUC on the test set is chosen. This heuristic resembles a wrapper method and may introduce optimistic bias; nested cross-validation is recommended as a future improvement.
 
-\subsection{Models}
+\subsection{Evaluation Metrics}
+The evaluation includes accuracy, precision, recall (sensitivity), F1-score,
+specificity, negative predictive value (NPV), false positive rate (FPR),
+false negative rate (FNR), balanced accuracy, and the area under the ROC curve
+(ROC-AUC), providing a comprehensive assessment of classification performance,
+particularly under potential class imbalance.
+
+
+
+\section{Models}
+
 Five models are evaluated:
 \begin{itemize}
-\item \textbf{MLP (Keras)}: Architecture 64-32 with ReLU, dropout 0.2, sigmoid output, early stopping.
-
-\item \textbf{SVM (RBF)}: The Support Vector Machine with Radial Basis Function kernel implements the optimization problem:
-    
-    \begin{equation}
-    \min_{w,b,\xi} \frac{1}{2} \|w\|^2 + C \sum_{i=1}^{n} \xi_i
-    \end{equation}
-    
-    subject to $y_i(w^T \phi(x_i) + b) \geq 1 - \xi_i$, with RBF kernel:
-    
-    \begin{equation}
-    K(x_i, x_j) = \exp\left(-\gamma \|x_i - x_j\|^2\right)
-    \end{equation}
-    
-    Hyperparameter optimization via GridSearchCV with 3-fold cross-validation explores $C \in \{0.1, 1, 10, 100\}$ and $\gamma \in \{\text{scale}, \text{auto}, 0.001, 0.01, 0.1, 1\}$, using class\_weight='balanced' for handling class imbalance.
-
-\item \textbf{XGBoost}: 100 trees, learning rate 0.05, max depth 5.
-\item \textbf{Random Forest}: 100 trees, max depth 5.
-\item \textbf{TabNet + Optuna}: Hyperparameters optimized with Optuna over 40 trials using 5-fold StratifiedKFold.
+\item \textbf{SVM (RBF)}: SVC with RBF kernel, probability=True for ROC-AUC, and class\_weight='balanced'.
+\item \textbf{Random Forest}: Example 100 trees, max depth 5.
+\item \textbf{XGBoost}: Example 100 trees, learning rate 0.05, max depth 5 (tune as needed).
+\item \textbf{TabNet + Optuna}: Hyperparameters optimized using Optuna, objective = cross-validated ROC-AUC.
 \end{itemize}
 
-\subsection{SVM Implementation Details}
-\label{subsec:svm_implementation}
 
-The SVM implementation employs scikit-learn's \texttt{SVC} class with key design decisions:
+\subsection{SVM}
+The support vector machine (SVM) classifier employs a radial basis function
+(RBF) kernel with probability estimation enabled (\texttt{probability=True}).
+To account for potential class imbalance, \texttt{class\_weight=balanced} is
+used. Hyperparameters are optimized via \texttt{GridSearchCV} on the scaled
+training data using 5-fold stratified cross-validation with
+\texttt{scoring='roc\_auc'}.
+The search space for the regularization parameter $C$ and kernel parameter
+$\gamma$ is summarized in Table~\ref{tab:svm_grid}. The optimal configuration
+is selected based on the highest mean ROC-AUC across cross-validation folds
+and reported from the run log (\texttt{svm\_grid.best\_params\_}).
 
-\begin{itemize}
-    \item \textbf{Kernel Selection}: RBF kernel chosen for its ability to capture complex non-linear relationships in clinical data.
-    \item \textbf{Probability Estimation}: Enabled (\texttt{probability=True}) for ROC-AUC calculation and clinical risk stratification.
-    \item \textbf{Class Balancing}: 'balanced' class weights to address potential class imbalance in medical datasets.
-    \item \textbf{Convergence Assurance}: \texttt{max\_iter=10000} to prevent premature termination during optimization.
-\end{itemize}
+\begin{table}[t]
+\centering
+\caption{Parameter Tuning for SVM Using GridSearchCV}
+\label{tab:svm_grid}
+\begin{tabular}{@{}ll@{}}
+\toprule
+Parameter & Values tested \\
+\midrule
+$C$ & 0.1, 1, 10, 100 \\
+$\gamma$ & scale, auto, 0.001, 0.01, 0.1, 1 \\
+class\_weight & balanced \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-\begin{algorithm}[h]
-\caption{SVM Hyperparameter Optimization}
-\label{alg:svm_opt}
-\begin{algorithmic}[1]
-\STATE Initialize parameter grid: $\mathcal{G} = \{(C,\gamma)\}$
-\FOR{each $(C,\gamma)$ in $\mathcal{G}$}
-\STATE Perform 3-fold cross-validation
-\STATE Train SVM with current $(C,\gamma)$ and class\_weight='balanced'
-\STATE Compute mean ROC-AUC across folds
-\ENDFOR
-\STATE Select $(C^*,\gamma^*) = \arg\max_{(C,\gamma)} \text{ROC-AUC}$
-\STATE Train final model on full training set with $(C^*,\gamma^*)$
-\RETURN Optimized SVM model
-\end{algorithmic}
-\end{algorithm}
 
-\section{Experimental Setup}
-Experiments are conducted in Python using \texttt{scikit-learn}, \texttt{xgboost}, \texttt{tensorflow/keras}, \texttt{pytorch}, \texttt{pytorch-tabnet}, and \texttt{optuna}. All random seeds are fixed to 42. TabNet optimization incurs higher computational cost due to nested cross-validation.
+\subsection{XGBoost}
+The gradient boosting model is implemented using XGBoost and tuned via
+\texttt{GridSearchCV} on the scaled training data. Hyperparameter optimization
+is conducted using 5-fold stratified cross-validation with
+\texttt{scoring='roc\_auc'}.
+
+The evaluated hyperparameter ranges, including tree complexity and sampling
+ratios, are summarized in Table~\ref{tab:xgb_grid}. The best hyperparameter
+configuration is selected based on cross-validated ROC-AUC and reported from
+the execution logs.
+
+\begin{table}[t]
+\centering
+\caption{Parameter Tuning for XGBoost Using GridSearchCV}
+\label{tab:xgb_grid}
+\begin{tabular}{@{}ll@{}}
+\toprule
+Parameter & Values tested \\
+\midrule
+n\_estimators & 100, 200 \\
+max\_depth & 3, 5 \\
+learning rate ($\eta$) & 0.03, 0.05, 0.1 \\
+subsample & 0.8, 1.0 \\
+colsample\_bytree & 0.8, 1.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\subsection{Random Forest}
+A Random Forest classifier is trained as a tree-based baseline model using the
+scaled feature set. The model configuration is summarized in
+Table~\ref{tab:rf_params}. These parameters are kept fixed to provide a stable
+reference for comparison with the tuned models.
+
+\begin{table}[t]
+\centering
+\caption{Random Forest Configuration}
+\label{tab:rf_params}
+\begin{tabular}{@{}ll@{}}
+\toprule
+Parameter & Value \\
+\midrule
+n\_estimators & 300 \\
+max\_depth & None \\
+class\_weight & balanced \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\subsection{TabNet (Optuna)}
+TabNet hyperparameters are optimized using Optuna with a 2-fold stratified
+cross-validation objective on the scaled training data. The study employs a
+\texttt{TPESampler} with a fixed random seed (42) and a
+\texttt{HyperbandPruner}, and runs for a total of 10 trials.
+
+The hyperparameter search space explored by Optuna is summarized in
+Table~\ref{tab:tabnet_optuna}. The best hyperparameter configuration and the
+corresponding cross-validated ROC-AUC are reported from the Optuna study logs. Following optimization, a final TabNet model is trained on the full scaled training set
+with early stopping, exactly as implemented in the code.
+
+\begin{table}[t]
+\centering
+\caption{TabNet Hyperparameter Search Space (Optuna)}
+\label{tab:tabnet_optuna}
+\begin{tabular}{@{}ll@{}}
+\toprule
+Parameter & Range / Values \\
+\midrule
+$n_d = n_a$ & 8, 16, 24 \\
+$n_{\text{steps}}$ & 3--5 \\
+$\gamma$ & 1.1--1.7 \\
+$\lambda_{\text{sparse}}$ & $10^{-6}$ -- $2\times10^{-4}$ \\
+mask\_type & entmax, sparsemax \\
+learning rate & $5\times10^{-3}$ -- $2\times10^{-2}$ \\
+batch\_size & 64, 128 \\
+virtual\_batch\_size & 32, 64 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
 
 \section{Results}
-\subsection{Metrics Definition}
-In addition to standard metrics, specificity ($TN/(TN+FP)$), sensitivity ($TP/(TP+FN)$), negative predictive value, false positive rate, false negative rate, balanced accuracy, and ROC-AUC are computed from the confusion matrix and predicted probabilities.
 
-\subsection{Overall Model Performance}
-\begin{table}[h]
+\subsection{Result Tables}
+The performance results of all evaluated models are summarized in
+Table~\ref{tab:results}. Models are ordered according to their ROC-AUC
+measured on the held-out test set, with higher values indicating better
+discriminative performance.
+
+\begin{table}[t]
 \centering
-\caption{Model Performance Comparison}
+\caption{Model performance on the test set (sorted by ROC-AUC).}
 \label{tab:results}
-\begin{tabular}{lcccc}
+\begin{tabular}{lccccc}
 \toprule
-Model & ACC & F1 & AUC & Bal. Acc \\
+Model & Acc & Prec & Rec & F1 & AUC \\
 \midrule
-MLP (Keras) & 0.912 & 0.908 & 0.957 & 0.911 \\
-\textbf{SVM (RBF)} & \textbf{0.956} & \textbf{0.958} & \textbf{0.991} & \textbf{0.956} \\
-XGBoost & 0.934 & 0.935 & 0.978 & 0.933 \\
-Random Forest & 0.923 & 0.925 & 0.965 & 0.922 \\
-TabNet (Optuna) & 0.945 & 0.947 & 0.985 & 0.944 \\
+RF & 0.990 & 1.000 & 0.980 & 0.990 & 0.992 \\
+SVM & 0.941 & 0.959 & 0.928 & 0.944 & 0.991 \\
+TabNet & 0.941 & 0.953 & 0.935 & 0.944 & 0.989 \\
+XGB & 0.962 & 1.000 & 0.928 & 0.963 & 0.988 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Detailed SVM Performance Analysis}
-\label{subsec:svm_results}
 
-The optimized SVM achieved exceptional performance with $C^* = 10$ and $\gamma^* = \text{scale}$. Key results include:
+\subsection{ROC Curves}
+ROC curves for all models are generated by the code and can be exported as a figure for inclusion (Fig.~\ref{fig:roc}).
 
-\begin{table}[h]
+\begin{figure}[H]
 \centering
-\caption{SVM Performance Metrics}
-\label{tab:svm_detailed}
-\begin{tabular}{@{}lc@{}}
-\toprule
-\textbf{Metric} & \textbf{Value} \\
-\midrule
-ROC-AUC & 0.991 \\
-Accuracy & 0.956 \\
-Sensitivity (Recall) & 0.961 \\
-Specificity & 0.951 \\
-F1-Score & 0.958 \\
-Precision & 0.955 \\
-Balanced Accuracy & 0.956 \\
-False Positive Rate & 0.049 \\
-False Negative Rate & 0.039 \\
-\bottomrule
-\end{tabular}
-\end{table}
+\includegraphics[width=0.95\linewidth]{ROC.png}
+\caption{ROC curve comparison.}
+\label{fig:roc}
+\end{figure}
 
-\textbf{Confusion Matrix Analysis}: 
-\[
-\mathbf{CM} = \begin{bmatrix}
-42 & 2 \\
-1 & 46
-\end{bmatrix} \quad \text{(n=91 test samples)}
-\]
-
-This yields sensitivity = $\frac{46}{47} = 0.9787$ and specificity = $\frac{42}{44} = 0.9545$, demonstrating excellent clinical utility with minimal false negatives.
-
-\textbf{Cross-Validation Stability}: 5-fold cross-validation produced mean AUC = $0.987 \pm 0.009$, indicating robust generalization.
-
-\textbf{Feature Importance}: Permutation importance analysis identified \textit{thalach} (maximum heart rate), \textit{oldpeak} (ST depression), and \textit{cp} (chest pain type) as most influential features, aligning with clinical knowledge.
 
 \section{Discussion}
-Tree-based and kernel-based models, as well as TabNet, are expected to perform strongly due to their ability to capture nonlinear relationships. Feature scaling is crucial for SVM and neural networks, while outlier removal improves robustness. Feature selection reduces dimensionality but introduces potential bias due to test-set AUC optimization; nested cross-validation would mitigate this issue.
+The pipeline follows a clear separation between train and test: the split is performed before preprocessing , and IQR bounds for continuous variables are estimated on the training set and applied consistently thereafter. Feature selection is performed on the training set using cross-validated ROC-AUC across top-$k$ subsets derived from RF Gini ranking, which reduces the risk of direct test-set selection bias.
 
-\subsection{SVM Clinical Implications}
-The SVM model demonstrated superior sensitivity (0.961) while maintaining high specificity (0.951), making it particularly suitable for medical screening applications where false negatives (missed diagnoses) carry severe consequences. Compared to XGBoost (sensitivity: 0.915), SVM reduces false negatives by approximately 5\%, a clinically significant improvement.
 
-\textbf{Clinical Deployment Considerations}:
-\begin{itemize}
-    \item The probability outputs enable risk stratification for tailored clinical pathways.
-    \item Computational efficiency (training time: ~2.3s) supports real-time clinical applications.
-    \item The RBF kernel effectively captures complex feature interactions common in cardiovascular physiology.
-\end{itemize}
-
-\textbf{Limitations}: While SVM offers excellent performance, its $O(n^2)$ time complexity may limit scalability to very large datasets, and interpretability is more challenging compared to tree-based models.
 
 \section{Conclusion and Future Work}
-This paper presents a reproducible and extensible pipeline for heart disease prediction, combining classical ML and deep tabular models with systematic preprocessing and evaluation. Future work includes probability calibration, explainability via SHAP, handling class imbalance, and external validation on independent cohorts.
+This paper presents a heart disease prediction pipeline with train-fit outlier bounds, RF-based top-$k$ feature selection using cross-validated AUC on training data, and a comparison of SVM, XGBoost, Random Forest, and TabNet (Optuna-tuned). Future work includes stricter evaluation protocols (e.g., validation-based early stopping for TabNet), calibration analysis, and external cohort validation.
 
-\section*{Code Availability}
-Complete SVM implementation and all models available at: \url{https://github.com/[repository]}. The repository includes preprocessing scripts, model training code, and evaluation utilities.
 
-\section*{Reproducibility Appendix}
-The pipeline follows: data loading $\rightarrow$ IQR outlier removal $\rightarrow$ EDA $\rightarrow$ stratified split $\rightarrow$ scaling $\rightarrow$ feature selection $\rightarrow$ model training $\rightarrow$ evaluation $\rightarrow$ ROC plotting $\rightarrow$ artifact saving. Saved artifacts include \texttt{scaler.pkl}, \texttt{selector.pkl}, \texttt{xgb\_model.json}, \texttt{mlp\_model.h5}, \texttt{svm\_model.pkl}, \texttt{rf\_model.pkl}, and \texttt{tabnet\_optuna.zip}.
 
 \begin{thebibliography}{99}
-\bibitem{breiman2001random} L. Breiman, ``Random forests,'' \emph{Machine Learning}, 2001.
-\bibitem{cortes1995support} C. Cortes and V. Vapnik, ``Support-vector networks,'' \emph{Machine Learning}, 1995.
-\bibitem{chen2016xgboost} T. Chen and C. Guestrin, ``XGBoost: A scalable tree boosting system,'' KDD, 2016.
-\bibitem{arik2021tabnet} S. O. Arik and T. Pfister, ``TabNet: Attentive interpretable tabular learning,'' AAAI, 2021.
-\bibitem{akiba2019optuna} T. Akiba et al., ``Optuna: A next-generation hyperparameter optimization framework,'' KDD, 2019.
-\bibitem{fawcett2006introduction} T. Fawcett, ``An introduction to ROC analysis,'' \emph{Pattern Recognition Letters}, 2006.
+
+\bibitem{breiman2001random}
+L. Breiman, ``Random forests,'' \emph{Machine Learning}, vol. 45, no. 1, pp. 5--32, 2001.
+
+\bibitem{cortes1995support}
+C. Cortes and V. Vapnik, ``Support-vector networks,'' \emph{Machine Learning}, vol. 20, no. 3, pp. 273--297, 1995.
+
+\bibitem{chen2016xgboost}
+T. Chen and C. Guestrin, ``XGBoost: A scalable tree boosting system,'' in
+\emph{Proc. 22nd ACM SIGKDD Int. Conf. Knowledge Discovery and Data Mining (KDD)},
+2016, pp. 785--794.
+
+\bibitem{arik2021tabnet}
+S. O. Arik and T. Pfister, ``TabNet: Attentive interpretable tabular learning,''
+in \emph{Proc. AAAI Conf. Artificial Intelligence}, vol. 35, no. 8, 2021,
+pp. 6679--6687.
+
+\bibitem{akiba2019optuna}
+T. Akiba, S. Sano, T. Yanase, T. Ohta, and M. Koyama,
+``Optuna: A next-generation hyperparameter optimization framework,''
+in \emph{Proc. 25th ACM SIGKDD Int. Conf. Knowledge Discovery and Data Mining (KDD)},
+2019, pp. 2623--2631.
+
+\bibitem{fawcett2006introduction}
+T. Fawcett, ``An introduction to ROC analysis,''
+\emph{Pattern Recognition Letters}, vol. 27, no. 8, pp. 861--874, 2006.
+
+
+\bibitem{guyon2003introduction}
+I. Guyon and A. Elisseeff, ``An introduction to variable and feature selection,''
+\emph{Journal of Machine Learning Research}, vol. 3, pp. 1157--1182, 2003.
+
+\bibitem{hastie2009elements}
+T. Hastie, R. Tibshirani, and J. Friedman,
+\emph{The Elements of Statistical Learning: Data Mining, Inference, and Prediction},
+2nd ed. New York, NY, USA: Springer, 2009.
+
+\bibitem{kohavi1995cross}
+R. Kohavi, ``A study of cross-validation and bootstrap for accuracy estimation
+and model selection,'' in \emph{Proc. Int. Joint Conf. Artificial Intelligence (IJCAI)},
+1995, pp. 1137--1143.
+
+
+\bibitem{detrano1989international}
+R. Detrano \emph{et al.}, ``International application of a new probability algorithm
+for the diagnosis of coronary artery disease,''
+\emph{American Journal of Cardiology}, vol. 64, no. 5, pp. 304--310, 1989.
+
+\bibitem{alizadehsani2013noninvasive}
+R. Alizadehsani \emph{et al.}, ``Non-invasive detection of coronary artery disease
+using data mining techniques,''
+\emph{Journal of Biomedical Informatics}, vol. 46, no. 5, pp. 831--842, 2013.
+
 \end{thebibliography}
 
 \end{document}
