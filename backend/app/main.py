@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from .predict import predict_xgb, predict_mlp, predict_svm, predict_rf, predict_dnn
+from .predict import predict_xgb, predict_svm, predict_rf, predict_tabnet
 
 app = FastAPI(title="Heart Disease Prediction API")
 
@@ -38,11 +38,6 @@ def predict_xgb_api(data: PatientData):
     prob = predict_xgb(data.dict())
     return {"probability": prob, "label": int(prob >= 0.5)}
 
-@app.post("/predict/mlp")
-def predict_mlp_api(data: PatientData):
-    prob = predict_mlp(data.dict())
-    return {"probability": prob, "label": int(prob >= 0.5)}
-
 @app.post("/predict/svm")
 def predict_svm_api(data: PatientData):
     prob = predict_svm(data.dict())
@@ -53,9 +48,9 @@ def predict_rf_api(data: PatientData):
     prob = predict_rf(data.dict())
     return {"probability": prob, "label": int(prob >= 0.5)}
 
-@app.post("/predict/dnn")
-def predict_dnn_api(data: PatientData):
-    prob = predict_dnn(data.dict())
+@app.post("/predict/tabnet")
+def predict_tabnet_api(data: PatientData):
+    prob = predict_tabnet(data.dict())
     return {
         "probability": prob,
         "label": int(prob >= 0.5)
